@@ -49,6 +49,7 @@ namespace _HASH_NAMESPACE {
         }; \
     }
 #else //MICROSOFT VC 2005
+#define _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS // [QUICK FIX] it works VS2015 anyway
 #include <hash_map>
 #include <hash_set>
 
@@ -57,11 +58,13 @@ namespace _HASH_NAMESPACE {
 using namespace _HASH_NAMESPACE;
 
 namespace _HASH_NAMESPACE {
+	// [QUICK FIX] C++11 includes std::hash
+	/*
     template<class T> struct hash
     {
         size_t operator()(const T &p) { return hash_compare<T>()(p); }
     };
-
+	//*/
     template<class T1, class T2> struct hash_compare<std::pair<T1, T2> >
     {
         static const size_t bucket_size = 4;
