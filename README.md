@@ -130,4 +130,4 @@ anything serious has their own ways of making transforms from motion data.
 
 - migration from MSVC9.0/VS2005 to MSVC14.0/VS2015
 - comment out "hash" in Pinocchio/hashutils.h to avoid clashing with std::hash in C++11
-
+- import FLTK-1.1.10 with binaries (both x86 and x64)
