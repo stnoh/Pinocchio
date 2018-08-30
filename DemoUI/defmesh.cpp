@@ -26,38 +26,38 @@ THE SOFTWARE.
 
 vector<Transform<> > DefMesh::computeTransforms() const
 {
-    vector<Transform<> > out;
+	// [TODO] figure out the conversion in this method ...
+    vector<Transform<>> out;
     int i;
     
     if(motion) {
-        vector<Transform<> > ts;
-        ts = motion->get();
+		vector<Transform<>> ts = motion->get();
         
         double legRatio = getLegRatio();
-	Vector3 trans = ts[0].getTrans() * legRatio;
+		Vector3 trans = ts[0].getTrans() * legRatio;
 
         for(int times = 0; times < 2; ++times) {
+			
+			if (times == 1)
+				trans += (out[0] * match[0] - out[1] * match[2]);
 
-	  if(times == 1)
-	    trans += (out[0] * match[0] - out[1] * match[2]);
-
-	  out.clear();
-	  vector<Vector3> tm;
-	  tm.push_back(match[0]);
-	  ts[0] = ts[0].linearComponent();
-	  for(i = 0; i < (int)ts.size(); ++i) {
-            int prevV = origSkel.fPrev()[i + 1];
-            out.push_back(Transform<>(tm[prevV]) * ts[i] * Transform<>(-match[prevV]));
-            tm.push_back(out.back() * match[i + 1]);
-	  }
+			out.clear();
+			vector<Vector3> tm;
+			tm.push_back(match[0]);
+			ts[0] = ts[0].linearComponent();
+			for(i = 0; i < (int)ts.size(); ++i) {
+				int prevV = origSkel.fPrev()[i + 1];
+				out.push_back(Transform<>(tm[prevV]) * ts[i] * Transform<>(-match[prevV]));
+				tm.push_back(out.back() * match[i + 1]);
+			}
 	  
-	  for(i = 0; i < (int)out.size(); ++i)
-            out[i] = Transform<>(trans + Vector3(0.5, 0, 0.5)) * out[i];
-	}
+			for(i = 0; i < (int)out.size(); ++i)
+				out[i] = Transform<>(trans + Vector3(0.5, 0, 0.5)) * out[i];
+		}
         
         return out;
     }
-    
+
 
     out.push_back(Transform<>(Vector3(0.5, 0, 0.5)));
 

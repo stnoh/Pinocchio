@@ -116,14 +116,14 @@ void Motion::readH(istream &strm)
 #if 1 
     HumanSkeleton skel;
     //int boneCorresp[17] = { 9, 0, 9, 0, 5, 6, 7, 0, 1, 2, 3, 14, 15, 16, 10, 11, 12 };
-    int boneCorresp[17] = { 9, 0, 9, 0, 5, 6, 7, 0, 1, 2, 3, 15, 16, 17, 11, 12, 13 };
+    int boneCorresp[17] = { 9, 0, 9, 0, 5, 6, 7, 0, 1, 2, 3, 15, 16, 17, 11, 12, 13 }; // (ignore {4, 8, 10, 14, 18} from 19 joints model)
 #else //centaur
     CentaurSkeleton skel;
     int boneCorresp[24] = { 0, 0, 0, 9, 10, 0, 5, 6, 0, 1, 2, 0, 5, 6, 0, 1, 2, 14, 15, 16, 10, 11, 12 };
 #endif
 
     //int filePrev[18] = {-1, 0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 10, 11, 12, 9, 14, 15, 16};
-    int filePrev[19] = {-1, 0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 9, 11, 12, 13, 9, 15, 16, 17};
+    int filePrev[19] = {-1, 0, 1, 2, 3, 0, 5, 6, 7, 0, 9, 9, 11, 12, 13, 9, 15, 16, 17}; // hierarchy of 19-joints model
     
     vector<Vector3> refNums;
 
@@ -142,8 +142,9 @@ void Motion::readH(istream &strm)
             refNums[i * 2] = Vector3();
     }
     refNums[24] = refNums[32] = (refNums[24] + refNums[32]) * 0.25;
-*/
+	*/
 
+	// [TODO] what is the meaning of this values ? [CHECK ME LATER]
     double refVals[numVals] = {
         /*
         0*-0.0250254, 0*-0.00934205, 0*-1.26306, -1031.46, 946.599, 922.532, -0.0194843, 0.0568432, 0.121606, 0, 100.054, 0, 0, 0.0799654, 0, 0, 0, -425.477, 0.126552, 0.351484, 0.0883195, 0, 0, -435.898, 0, -0.601974, 0, 175.435, 0, 0, 0.0251119, 0.0218503, -0.251097, 0, -100.054, 0, 0, 0.168678, 0, 0, 0, -425.477, -0.0247609, 0.272914, -0.0187815, 0, 0, -435.898, 0, -0.452158, 0, 175.435, 0, 0, -1.99758e-05, 0.0727399, 0.0286016, -50, 0, 259.033, 0.205393, -0.127389, 0.434131, 0, 0, 330.555, -0.502925, 0.019719, 0.0767161, 0, 0, 261.792, 0.72968, -0.143153, 0.109099, 0, 187.185, 49.4561, 0.116146, -0.430137, -0.518831, 0, 0, -295.832, -0.00958385, 0.0218873, -0.000104887, 0, 0, -274.368, 0.465736, -0.0151283, 0.063763, 0, 0, 261.792, -0.669662, -0.0660955, -0.306066, 0, -187.185, 49.4561, -0.116392, -0.335282, 0.661388, 0, 0, -295.832, -0.0882838, 0.0118039, -0.000521391, 0, 0, -274.368
@@ -174,17 +175,18 @@ void Motion::readH(istream &strm)
         0.05564195976910109, -0.1970120842592028, -0.5503636706436617,
         0, 0, -263.0299987792969, 0.01854052737835739,
         -0.05639195309438585, -0.0005072173454329611, 0, 0,
--224.7669982910156
-        
+		-224.7669982910156
     };
 
-    refNums.resize(38);
+	// double[114] -> Vector3[38]
+	refNums.resize(38); // 114/3 = 38
     for(i = 0; i < numVals; ++i)
         refNums[i / 3][i % 3] = refVals[i];
 
-    while(!strm.eof()) {
+	// get each frame
+	while(!strm.eof()) {
         ++lineNum;
-        if(data.size() > 36000)
+        if(data.size() > 36000) // cutoff if it exceeds 36000 frames (= 5[min] = 600[sec] x 120fps)
             break;
         
         vector<string> words = readWords(strm);
@@ -200,38 +202,42 @@ void Motion::readH(istream &strm)
             return;
         }
         
-        vector<Vector3> nums(words.size() / 3);
+		// convert to Vector3[38]
+		vector<Vector3> nums(words.size() / 3);
         for(i = 0; i < (int)words.size(); ++i) {
             double cur;
             sscanf(words[i].c_str(), "%lf", &cur);
             nums[i / 3][i % 3] = cur;
         }
         
-        if(refPose.empty()) {
+		// get the pose at the first frame as reference pose ...
+		if(refPose.empty()) {
             refPose = computePose(refNums, filePrev);
             legWidth = fabs(refPose[4][0] - refPose[8][0]);
             legLength = fabs(refPose[4][1] - refPose[0][1]);
         }
         
-        vector<Vector3> pose = computePose(nums, filePrev);
+        vector<Vector3> pose = computePose(nums, filePrev); // still 19 nodes
         
         {
             vector<Vector3> cp;
-            for(i = 1; i < (int)pose.size(); ++i) {
+            for(i = 1; i < (int)pose.size(); ++i) { // except of the first joint (connected to null(-1) node)
                 cp.push_back(pose[filePrev[i]]);
                 cp.push_back(pose[i]);
             }
-            poses.push_back(cp);
+            poses.push_back(cp); // push as node-to-node: push 36 (=18x2) bone
         }
         
-        data.resize(data.size() + 1);
+		// [IMPORTANT] convert 19-joints to 17-joints model
+		data.resize(data.size() + 1);
         vector<Transform<> > trs = computeTransfs(nums, refNums, filePrev);
         for(i = 0; i < (int)skel.fPrev().size() - 1; ++i) {
-            data.back().push_back(trs[boneCorresp[i]]);
+            data.back().push_back(trs[boneCorresp[i]]); // until here, it only has "rotation" values
         }
         
-        Quaternion<> qtrans(Vector3(1., 1., 1.), 4. * M_PI / 3.);
-        Transform<> trans(qtrans * nums[1] * 0.0005);
+		// applies the translation in the first node
+		Quaternion<> qtrans(Vector3(1., 1., 1.), 4. * M_PI / 3.);
+        Transform<> trans(qtrans * nums[1] * 0.0005); // [TODO] meaning of 0.0005 ? [CHECK ME LATER]
         data.back()[0] = trans * data.back()[0];
     }
 
@@ -279,7 +285,7 @@ int Motion::getFrameIdx() const
 {
     if(fixedFrame >= 0)
         return fixedFrame;
-    return (getMsecs() / (1000 / 120)) % data.size();
+    return (getMsecs() / (1000 / 120)) % data.size(); // means 120 fps ?
 }
 
 vector<Transform<> > Motion::get() const
